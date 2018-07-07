@@ -1,24 +1,29 @@
 import pathlib
 from datetime import datetime
 from itertools import chain
+import pandas as pd
+import numpy as np
 
 
 class DataProcessor:
-    def __init__(self, path: str, non_feature_columns=None):
+    def __init__(self, path: str, df, non_feature_columns=None, correlation_threshold=1.0,
+                 importance_threshold=-1.0, fname_prefix='', verbose=True):
         if not path.endswith('/'):
             path += '/'
         self.base_path = path
-        self.fname = str(datetime.now()).replace(':', '_').replace(' ', '_')[5:19]
+        self.fname = fname_prefix + str(datetime.now()).replace(':', '_').replace(' ', '_')[5:19]
         self.transforms = []
 
-        self.features = {'all': [],
+        self.features = {'all': [col for col in df.columns if col not in non_feature_columns],
                          'selected': [],
                          'correlated': [],
                          'unimportant': []}
 
-        self.correlation_threshold = 1.0
-        self.importance_threshold = -1.0
+        self.correlation_threshold = correlation_threshold
+        self.importance_threshold = importance_threshold
         self.non_feature_columns = non_feature_columns  # stuff like label, filename, etc.
+
+        self.verbose = verbose
 
         # store lists of features to be removed
         pathlib.Path(path + 'dataprocessor_files/features/correlated').mkdir(parents=True, exist_ok=True)
@@ -30,6 +35,21 @@ class DataProcessor:
         pathlib.Path(path + 'dataprocessor_files/logs/predictions').mkdir(parents=True, exist_ok=True)
 
         pathlib.Path(path + 'dataprocessor_files/settings').mkdir(parents=True, exist_ok=True)
+
+    def find_correlated_features(self, df: pd.DataFrame, use_features: str='all', correlation_threshold=None):
+        if correlation_threshold is not None:
+            self.correlation_threshold = correlation_threshold
+
+        corr = df[self.features[use_features]].corr()
+        corr = corr.abs()
+        upper = corr.where(np.triu(np.ones(corr.shape), k=1).astype(np.bool))
+        self.features['correlated'] = [col for col in upper.columns if any(upper[col] > self.correlation_threshold)]
+
+        if self.verbose:
+            print(str(len(self.features['correlated']))
+                  + 'features found with a correlation higher than ' + str(self.correlation_threshold))
+        self.features['selected'] = [x for x in self.features['all'] if x not in self.features['correlated']]
+        return self.features['selected'], self.features['correlated']
 
     def return_features_list(self, use_features: str='selected'):
         """
