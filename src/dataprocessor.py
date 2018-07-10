@@ -13,6 +13,7 @@ class DataProcessor:
         self.base_path = path
         self.fname = fname_prefix + str(datetime.now()).replace(':', '_').replace(' ', '_')[5:19]
         self.transforms = []
+        self.transform_params = []
 
         self.features = {'all': [col for col in df.columns if col not in non_feature_columns],
                          'selected': [],
@@ -66,7 +67,11 @@ class DataProcessor:
             output = list(set(list(chain(*output))))
             return output
 
-    def fit_transform(self, df, transform, use_features: str='selected'):
+    def add_transform(self, transform, transform_params):
+        self.transforms.append(transform)
+        self.transform_params.append(transform_params)
+
+    def fit_transform(self, df,  use_features: str='selected'):
         """
         Fit and apply transforms to a dataframe
         :param df:
@@ -75,8 +80,9 @@ class DataProcessor:
         :return:
         """
         features_to_use = self.return_features_list(use_features)
-        df[features_to_use] = transform.fit_transform(df[features_to_use])
-        self.transforms.append(transform)
+
+        for transform, transform_params in zip(self.transforms, self.transform_params):
+            df[features_to_use] = transform.fit_transform(df[features_to_use], **transform_params)
 
     def transform(self, df, use_features: str='selected'):
         """
@@ -86,5 +92,6 @@ class DataProcessor:
         :return:
         """
         features_to_use = self.return_features_list(use_features)
-        for transform in self.transforms:
-            df[features_to_use] = transform.fit_transform(df[features_to_use])
+
+        for transform, transform_params in zip(self.transforms, self.transform_params):
+            df[features_to_use] = transform.transform(df[features_to_use], **transform_params)
