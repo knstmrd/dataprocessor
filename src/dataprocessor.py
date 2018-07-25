@@ -48,16 +48,18 @@ class DataProcessor:
     def add_remover(self, remover, remover_params):
         self.removers.append(remover(**remover_params))
         self.remover_params.append(remover_params)
+        return self
 
     def fit_remove(self, df):
         current_features_to_use = self.return_features_list('all')
         features_removed = []
-        for remover, remover_params in zip(self.removers, self.remover_params):
-            current_features_to_use, to_be_removed = remover(df, current_features_to_use)
+        for remover in self.removers:
+            current_features_to_use, to_be_removed = remover.fit(df, current_features_to_use)
             features_removed += to_be_removed
         features_removed = list(set(features_removed))
         self.features['removed'] = features_removed
         self.features['selected'] = current_features_to_use
+        return self.features['selected'], self.features['removed']
 
     def add_transform(self, transform, transform_params):
         self.transforms.append(transform(**transform_params))
