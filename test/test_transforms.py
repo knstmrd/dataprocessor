@@ -9,6 +9,8 @@ class DataTransformsTest(unittest.TestCase):
     def setUp(self):
         self.df = pd.DataFrame({'x': [0, 1e7], 'y': [0, 9e4], 'z': [1e-5, 1e2]})
         self.df2 = pd.DataFrame({'x': [-2, 0, 2], 'x_p_1': [-1, 1, 3], 'x_t_x': [4, 0, 4], 'nonfeat': ['a', 'b', 'c']})
+        self.df3 = pd.DataFrame({'x': [0, 0, 0, 0, 1], 'y': [0, 0, 0, 1, 1], 'z': [100, 100, 100, 100, 100],
+                                 'txt': ['a', 'b', 'c', 'd', 'e']})
 
     def test_log_scaling_pandas(self):
         df_copy = self.df.copy()
@@ -31,3 +33,13 @@ class DataTransformsTest(unittest.TestCase):
         self.assertIn('x_p_1', correlated)  # we store the second feature in a separate field
         self.assertNotIn('nonfeat', selected)
         self.assertNotIn('nonfeat', correlated)
+
+    def test_find_almostconst_features(self):
+        almostconst_remover = removers.AlmostConstantFeatureRemover(max_count_percent=75)
+        selected, removed = almostconst_remover.fit(self.df3, self.df3.columns)
+        self.assertIn('x', removed)
+        self.assertNotIn('x', selected)
+        self.assertIn('z', removed)
+        self.assertNotIn('y', removed)
+        self.assertIn('y', selected)
+        self.assertNotIn('txt', removed)
