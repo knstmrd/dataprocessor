@@ -31,8 +31,15 @@ class CorrelatedFeatureRemover:
         self.load_from_file = load_from_file
 
     def fit(self, df, feature_columns):
-        corr = df[feature_columns].corr()
-        corr = corr.abs()
+        if self.load_from_file:
+            corr = pd.read_csv(self.load_from_file, index_col=0)
+            corr = corr.abs()
+        else:
+            corr = df[feature_columns].corr()
+            if self.write_to_file:
+                corr.to_csv(self.write_to_file)
+            corr = corr.abs()
+
         upper = corr.where(np.triu(np.ones(corr.shape), k=1).astype(np.bool))
         self.columns_to_remove = [col for col in upper.columns if any(upper[col] > self.correlation_threshold)]
         self.columns_to_leave = [x for x in feature_columns if x not in self.columns_to_remove]
