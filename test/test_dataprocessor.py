@@ -17,12 +17,11 @@ class DataProcessorTest(unittest.TestCase):
         rmtree(self.curr_dir + 'dataprocessor_files/')
 
     def test_directory_creation(self):
-        self.assertEqual(isdir(self.curr_dir + 'dataprocessor_files/features/correlated'), True)
-        self.assertEqual(isdir(self.curr_dir + 'dataprocessor_files/features/unimportant'), True)
-        self.assertEqual(isdir(self.curr_dir + 'dataprocessor_files/features/lists'), True)
+        self.assertEqual(isdir(self.curr_dir + 'dataprocessor_files/features/removed'), True)
+        self.assertEqual(isdir(self.curr_dir + 'dataprocessor_files/features/selected'), True)
 
-        self.assertEqual(isdir(self.curr_dir + 'dataprocessor_files/logs/cv'), True)
-        self.assertEqual(isdir(self.curr_dir + 'dataprocessor_files/logs/predictions'), True)
+        self.assertEqual(isdir(self.curr_dir + 'dataprocessor_files/output/cv'), True)
+        self.assertEqual(isdir(self.curr_dir + 'dataprocessor_files/output/predictions'), True)
 
         self.assertEqual(isdir(self.curr_dir + 'dataprocessor_files/settings'), True)
 
