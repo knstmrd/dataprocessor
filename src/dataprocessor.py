@@ -3,6 +3,7 @@ from datetime import datetime
 from itertools import chain
 import pandas as pd
 import numpy as np
+import json
 
 
 class DataProcessor:
@@ -16,6 +17,9 @@ class DataProcessor:
         self.transforms = []
         self.transform_params = []
 
+        self.saved = False
+
+        # TODO: load feature lists from file
         self.features = {'all': [col for col in df.columns if col not in non_feature_columns],
                          'selected': [],
                          'removed': []
@@ -26,13 +30,12 @@ class DataProcessor:
         self.verbose = verbose
 
         # store lists of features to be removed
-        pathlib.Path(path + 'dataprocessor_files/features/correlated').mkdir(parents=True, exist_ok=True)
-        pathlib.Path(path + 'dataprocessor_files/features/unimportant').mkdir(parents=True, exist_ok=True)
-        pathlib.Path(path + 'dataprocessor_files/features/lists').mkdir(parents=True, exist_ok=True)
+        pathlib.Path(path + 'dataprocessor_files/features/removed').mkdir(parents=True, exist_ok=True)
+        pathlib.Path(path + 'dataprocessor_files/features/selected').mkdir(parents=True, exist_ok=True)
 
         # store logs for cv and predictions
-        pathlib.Path(path + 'dataprocessor_files/logs/cv').mkdir(parents=True, exist_ok=True)
-        pathlib.Path(path + 'dataprocessor_files/logs/predictions').mkdir(parents=True, exist_ok=True)
+        pathlib.Path(path + 'dataprocessor_files/output/cv').mkdir(parents=True, exist_ok=True)
+        pathlib.Path(path + 'dataprocessor_files/output/predictions').mkdir(parents=True, exist_ok=True)
 
         pathlib.Path(path + 'dataprocessor_files/settings').mkdir(parents=True, exist_ok=True)
 
@@ -90,3 +93,28 @@ class DataProcessor:
 
         for transform, transform_params in zip(self.transforms, self.transform_params):
             df[features_to_use] = transform.transform(df[features_to_use], **transform_params)
+
+    def cv(self, scorer, predict_proba=False, df_test=None):
+        # TODO: write check for whether is saved, if not, save first
+        # Write mean, std (score); names of feature lists, list of feature removers and transforms and their settings
+        # also can run on df_test and predict there
+        pass
+
+    def save(self):
+        with open(self.base_path + 'dataprocessor_files/features/removed/' + self.fname, 'w') as f:
+            for feature in self.features['removed']:
+                f.write('{}\n'.format(feature))
+
+        with open(self.base_path + 'dataprocessor_files/features/selected/' + self.fname, 'w') as f:
+            for feature in self.features['selected']:
+                f.write('{}\n'.format(feature))
+
+        settings = {'features removed list': 'dataprocessor_files/features/removed/' + self.fname,
+                    'features selected list': 'dataprocessor_files/features/selected/' + self.fname,
+                    'removers': [str(remover) for remover in self.removers],
+                    'remover_params': [str(remover_params) for remover_params in self.remover_params]}
+        # TODO: check if current_settings exists, if it does, rename it to settings_old_fname.log
+        # with open(self.base_path + 'dataprocessor_files/settings/current_settings.log')
+        with open(self.base_path + 'dataprocessor_files/settings/current_settings.log', 'w') as f:
+            json.dump(settings, f)
+        self.saved = True
