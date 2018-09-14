@@ -19,7 +19,6 @@ class DataProcessor:
 
         self.saved = False
 
-        # TODO: load feature lists from file
         self.features = {'all': [col for col in df.columns if col not in non_feature_columns],
                          'selected': [],
                          'removed': []
@@ -28,6 +27,20 @@ class DataProcessor:
         self.non_feature_columns = non_feature_columns  # stuff like label, filename, etc.
 
         self.verbose = verbose
+
+        if pathlib.Path(path + 'dataprocessor_files/settings/current_settings.log').exists():
+            with open(self.base_path + 'dataprocessor_files/settings/current_settings.log', 'r') as f:
+                self.settings = json.load(f)
+            print('Previous settings file found')
+            with open(path + self.settings['features removed list'], 'r') as f:
+                self.features['removed'] = [l.replace('\n', '') for l in f if l != '\n']
+            print('List of removed features contains {} elements'.format(len(self.features['removed'])))
+            with open(path + self.settings['features selected list'], 'r') as f:
+                self.features['selected'] = [l.replace('\n', '') for l in f if l != '\n']
+            print('List of selected features contains {} elements'.format(len(self.features['selected'])))
+        else:
+            print('No previous settings file found')
+            self.settings = {}
 
         # store lists of features to be removed
         pathlib.Path(path + 'dataprocessor_files/features/removed').mkdir(parents=True, exist_ok=True)
@@ -109,12 +122,21 @@ class DataProcessor:
             for feature in self.features['selected']:
                 f.write('{}\n'.format(feature))
 
-        settings = {'features removed list': 'dataprocessor_files/features/removed/' + self.fname,
-                    'features selected list': 'dataprocessor_files/features/selected/' + self.fname,
-                    'removers': [str(remover) for remover in self.removers],
-                    'remover_params': [str(remover_params) for remover_params in self.remover_params]}
-        # TODO: check if current_settings exists, if it does, rename it to settings_old_fname.log
-        # with open(self.base_path + 'dataprocessor_files/settings/current_settings.log')
+        self.settings = {'features removed list': 'dataprocessor_files/features/removed/' + self.fname,
+                         'features selected list': 'dataprocessor_files/features/selected/' + self.fname,
+                         'removers': [str(remover) for remover in self.removers],
+                         'remover_params': [str(remover_params) for remover_params in self.remover_params],
+                         'fname': self.fname}
+
+        # move old settings
+        if pathlib.Path(self.base_path + 'dataprocessor_files/settings/current_settings.log').exists():
+            with open(self.base_path + 'dataprocessor_files/settings/current_settings.log', 'r') as f:
+                old_settings = json.load(f)
+
+            with open(self.base_path
+                      + 'dataprocessor_files/settings/old_settings_{}.log'.format(old_settings['fname']), 'w') as f:
+                json.dump(old_settings, f)
+
         with open(self.base_path + 'dataprocessor_files/settings/current_settings.log', 'w') as f:
-            json.dump(settings, f)
+            json.dump(self.settings, f)
         self.saved = True
