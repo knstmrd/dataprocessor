@@ -40,3 +40,34 @@ class DataProcessorTest(unittest.TestCase):
         self.assertNotIn('nonfeat', removed)
         self.assertNotIn('const', selected)
         self.assertIn('const', removed)
+
+
+class DataProcessorPersistenceTest(unittest.TestCase):
+    def setUp(self):
+        self.curr_dir = getcwd() + '/'
+        self.df = pd.DataFrame({'x': [-2, 0, 2], 'x_p_1': [-1, 1, 3], 'x_t_x': [4, 0, 4], 'nonfeat': ['a', 'b', 'c'],
+                                'const': [10, 10, 10]})
+        self.dataprocessor = dataprocessor.DataProcessor(self.curr_dir, self.df, non_feature_columns=['nonfeat'])
+
+    def tearDown(self):
+        rmtree(self.curr_dir + 'dataprocessor_files/')
+
+    def test_removing_features_persistence(self):
+        self.dataprocessor.add_remover(removers.CorrelatedFeatureRemover, {'correlation_threshold': 0.5})
+        self.dataprocessor.add_remover(removers.AlmostConstantFeatureRemover, {'max_count_percent': 80})
+        selected, removed = self.dataprocessor.fit_remove(self.df)
+        self.assertIn('x', selected)  # we keep the first feature
+        self.assertNotIn('x_p_1', selected)  # we don't keep the second feature
+        self.assertIn('x_p_1', removed)  # we store the second feature in a separate field
+        self.assertNotIn('nonfeat', selected)
+        self.assertNotIn('nonfeat', removed)
+        self.assertNotIn('const', selected)
+        self.assertIn('const', removed)
+        self.dataprocessor.save()
+
+        dp2 = dataprocessor.DataProcessor(self.curr_dir, self.df, non_feature_columns=['nonfeat'])
+        selected_dp2 = dp2.return_features_list('selected')
+        removed_dp2 = dp2.return_features_list('removed')
+        # print(self.dp2.settings)
+        self.assertListEqual(selected, selected_dp2)
+        self.assertListEqual(removed, removed_dp2)
