@@ -1,8 +1,5 @@
 import pathlib
 from datetime import datetime
-from itertools import chain
-import pandas as pd
-import numpy as np
 import json
 
 
@@ -11,8 +8,9 @@ class DataProcessor:
         if not path.endswith('/'):
             path += '/'
         self.base_path = path
-        self.fname = fname_prefix + str(datetime.now()).replace(':', '_').replace(' ', '_')[5:19]
         self.removers = []
+        self.fname_prefix = fname_prefix
+        self.fname = self.fname_prefix + str(datetime.now()).replace(':', '_').replace(' ', '_')[5:19]
         self.remover_params = []
         self.transforms = []
         self.transform_params = []
@@ -107,13 +105,34 @@ class DataProcessor:
         for transform, transform_params in zip(self.transforms, self.transform_params):
             df[features_to_use] = transform.transform(df[features_to_use], **transform_params)
 
-    def cv(self, scorer, predict_proba=False, df_test=None):
-        # TODO: write check for whether is saved, if not, save first
+    def cv(self, df, predictor, scorers, predict_proba=False, df_test=None, use_features: str='selected'):
+
+        mean_score = [0.0] * len(scorers)
+        std_score = [0.0] * len(scorers)
+        if not self.saved:
+            print('Dataprocessor settings not saved, will save now')
+            self.save()
+
+        with open(self.base_path + 'dataprocessor_files/cv/cv.log', 'a') as f:
+
+            for (scorer, scorer_name) in scorers:
+                f.write('Mean(score): {}\nStd(score): {}\n'.format(mean_score, std_score))
+                f.write('Scorer={}, mean(score): {}\nScorer={}, std(score): {}\n'.format(scorer_name, mean_score,
+                                                                                         scorer_name, std_score))
+            f.write('Predictor: {}\nPredict_proba: {}\n'.format(str(predictor), str(predict_proba)))
+            f.write('Features used: {}\n'.format(use_features))
+            f.write('Selected features list: {}\n'.format(self.base_path + 'dataprocessor_files/features/selected/'
+                                                          + self.fname))
+            f.write('Removed features list: {}\n'.format(self.base_path + 'dataprocessor_files/features/removed/'
+                                                         + self.fname))
+
+            f.write('\n\n\n')
         # Write mean, std (score); names of feature lists, list of feature removers and transforms and their settings
         # also can run on df_test and predict there
         pass
 
     def save(self):
+        self.fname = self.fname_prefix + str(datetime.now()).replace(':', '_').replace(' ', '_')[5:19]
         with open(self.base_path + 'dataprocessor_files/features/removed/' + self.fname, 'w') as f:
             for feature in self.features['removed']:
                 f.write('{}\n'.format(feature))
@@ -140,3 +159,8 @@ class DataProcessor:
         with open(self.base_path + 'dataprocessor_files/settings/current_settings.log', 'w') as f:
             json.dump(self.settings, f)
         self.saved = True
+
+    def write_features(self, df, df_format):
+        # write selected and transformed features to a dataframe
+        # and add that to settings
+        pass
