@@ -3,6 +3,7 @@ import numpy as np
 import unittest
 from src import transforms
 from src import removers
+from src import exceptions
 
 
 class DataTransformsTest(unittest.TestCase):
@@ -12,6 +13,7 @@ class DataTransformsTest(unittest.TestCase):
         self.df3 = pd.DataFrame({'x': [0, 0, 0, 0, 1], 'y': [0, 0, 0, 1, 1], 'z': [100, 100, 100, 100, 100],
                                  'txt': ['a', 'b', 'c', 'd', 'e']})
         self.df4 = pd.DataFrame({'x': [-2, 0, 2], 'x_p_1': [-100, 21, 3], 'x_t_x': [4, 0, 4]})
+        self.df5 = pd.DataFrame({'x': [-2, 0, 2], 'x_p_2': [-100, 21, 3], 'x_t_x': [4, 0, 4]})
 
     def test_log_scaling_pandas(self):
         df_copy = self.df.copy()
@@ -56,3 +58,10 @@ class DataTransformsTest(unittest.TestCase):
         self.assertNotIn('x_p_1', selected)  # we don't keep the second feature
         self.assertIn('x_p_1', correlated)  # we store the second feature in a separate field
 
+    def test_correlated_features_persistence_error(self):
+        corr_remover = removers.CorrelatedFeatureRemover(0.5, write_to_file='test.csv')
+        selected, correlated = corr_remover.fit(self.df2, ['x', 'x_p_1', 'x_t_x'])
+        corr_remover2 = removers.CorrelatedFeatureRemover(0.5, load_from_file='test.csv')
+
+        self.assertRaises(exceptions.DataProcessorError,  corr_remover2.fit,
+                          self.df5, ['x', 'x_p_2', 'x_t_x'])
